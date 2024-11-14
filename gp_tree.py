@@ -9,7 +9,7 @@
 
 import numpy as np
 import pandas as pd
-from gp_list import *
+from gp_list_design_tree import *
 
 class gp_tree:
     def __init__(self, list_T=None, list_F=None, level=0, nom_list='1', type_ini='full',

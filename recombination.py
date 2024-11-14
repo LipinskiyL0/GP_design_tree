@@ -9,7 +9,7 @@ Created on Sat Feb 25 21:09:15 2023
 """
 
 import numpy as np
-from gp_list import *
+from gp_list_design_tree import *
 from gp_tree import *
 import random
 import re

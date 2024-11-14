@@ -10,7 +10,7 @@ Created on Tue Feb 14 20:22:58 2023
 
 import numpy as np
 import pandas as pd
-from gp_list import *
+from gp_list_design_tree import *
 from gp_tree import *
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error
