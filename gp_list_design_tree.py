@@ -93,70 +93,31 @@ class list_regr_const:
         return self.name
         
 #==============================================================================
-class list_sum:
-    def __init__(self, num_childs=2 ) -> None:
-        self.name='sum'
-        self.num_childs=num_childs
+class list_less:
+    def __init__(self, name_feature,name_lim ) -> None:
+        self.name='less'
+        self.name_feature=name_feature
+        self.name_lim=name_lim
+        self.num_childs=2
     def eval(self, childs=None, params=None):
         #для общности в каждый узел передаем и потомков и параметры
         try:
-            return np.sum(childs, axis=0)
+            x=params['X'][self.name_feature]
+            mask=x<params['params'][self.name_lim]
+            return mask
         except:
             
-            raise RuntimeError(f"Ошибка вычисления узла типа list_sum: name={0}, childs={1}".format(self.name,childs ))
+            raise RuntimeError(f"Ошибка вычисления узла типа list_less: name={0}, childs={1}".format(self.name,childs ))
         return False
     def copy(self):
         #функция выполняет полную копию узла
-        rez=list_sum()
+        rez=list_less()
         rez.name=self.name
         rez.num_childs=self.num_childs
         return rez
     
     def get_name(self):
-        return self.name+str(self.num_childs)
-#==============================================================================
-class list_prod:
-    def __init__(self, num_childs=2 ) -> None:
-        self.name='prod'
-        self.num_childs=num_childs
-    def eval(self, childs=None, params=None):
-        #для общности в каждый узел передаем и потомков и параметры
-        try:
-            return np.prod(childs, axis=0)
-        except:
-            
-            raise RuntimeError("Ошибка вычисления узла типа list_prod: name={0}, childs={1}".format(self.name,childs ))
-        return False
-    def copy(self):
-        #функция выполняет полную копию узла
-        rez=list_prod()
-        rez.name=self.name
-        rez.num_childs=self.num_childs
-        return rez
-    
-    def get_name(self):
-        return self.name+str(self.num_childs)    
-#==============================================================================
-class list_sin:
-    def __init__(self) -> None:
-        self.name='sin'
-        self.num_childs=1
-    def eval(self, childs=None, params=None):
-        #для общности в каждый узел передаем и потомков и параметры
-        try:
-            return np.sin(childs[0])
-        except:
-            
-            raise RuntimeError("Ошибка вычисления узла типа list_sin: name={0}, childs={1}".format(self.name,childs ))
-        return False
-    def copy(self):
-        #функция выполняет полную копию узла
-        rez=list_sin()
-        rez.name=self.name
-        rez.num_childs=self.num_childs
-        return rez
-    def get_name(self):
-        return self.name
+        return f'{self.name}_{str(self.name_lim)}'
 
 
 
@@ -164,11 +125,24 @@ if __name__=='__main__':
     y=pd.Series(np.arange(0,1, 0.1), index=100*np.arange(0,1, 0.1))
     node=list_nom_class(value=1)
     rez=node.eval(params={'y':y}, mask=y>0.5)
+    print(node.get_name())
     print(rez)
 
-    node1=list_regr_const(name='const_0')
-    rez=node1.eval(params={'y':y, 'params':{'const_0':101}}, mask=y<0.5)
+    node=list_regr_const(name='const_0')
+    rez=node.eval(params={'y':y, 'params':{'const_0':101}}, mask=y<0.5)
+    print(node.get_name())
     print(rez)
+    
+    df=y.copy()
+    df=df*1000
+    df.name='x1'
+    df=df.reset_index()
+    node=list_less(name_feature='x1',name_lim='p1' )
+    rez=node.eval(params={'X':df,'y':y, 'params':{'p1':350}})
+    print(node.get_name())
+    print(rez)
+    print(df)
+    
 
     
 
