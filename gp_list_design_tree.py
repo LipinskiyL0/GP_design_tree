@@ -39,12 +39,17 @@ class list_tree_base:
     def __init__(self) -> None:
         self.name=''
         self.num_childs=0
-        self.num_koef=0
-        self.koef={}
-        if self.num_koef!=len(self.get_name_koef()):
-            raise RuntimeError("Ошибка инициализации узла. Количество коэффициентов не совпадает с количеством имен")
-    def eval(self,  params=None, mask=None):
         
+        keys=self.get_name_koef()
+        self.koef={}
+        for k in keys:
+            self.koef[k]=0
+    def eval(self,  params=None, mask=None):
+        keys=self.get_name_koef()
+        for k in keys:
+            if (k in self.koef)==False:
+                raise RuntimeError("Недстаточно параметров в узле для вычисления")
+            
         return False
     def copy(self):
         #функция выполняет полную копию узла
@@ -80,17 +85,19 @@ class list_nom_class (list_tree_base):
         self.name='nom_class'
         self.value=value
         self.num_childs=0
-        self.num_koef=0
+        keys=self.get_name_koef()
         self.koef={}
-        if self.num_koef!=len(self.get_name_koef()):
-            raise RuntimeError("Ошибка инициализации узла. Количество коэффициентов не совпадает с количеством имен")
+        for k in keys:
+            self.koef[k]=0
+
     def eval(self,  params=None, mask=None):
         #для общности в каждый узел передаем и коэффициенты и параметры
         # создаем шаблон для выхода
-        if len(self.koef)<self.num_koef:
-            raise RuntimeError("Недостаточно коэффициентов в узле: name={0}".format(self.name))
+        keys=self.get_name_koef()
+        for k in keys:
+            if (k in self.koef)==False:
+                raise RuntimeError("Недстаточно параметров в узле для вычисления")
         y_pred=pd.Series(np.nan, index= params['y'].index)
-
         y_pred.loc[mask]=self.value
         return y_pred
     
@@ -101,16 +108,19 @@ class list_regr_const(list_tree_base):
     def __init__(self) -> None:
         self.name='const'
         self.num_childs=0
-        self.num_koef=1
+        
+        keys=self.get_name_koef()
         self.koef={}
-        if self.num_koef!=len(self.get_name_koef()):
-            raise RuntimeError("Ошибка инициализации узла. Количество коэффициентов не совпадает с количеством имен")
-
+        for k in keys:
+            self.koef[k]=0
+        
     def eval(self, params=None, mask=None):
         #для общности в каждый узел передаем и коэффициенты и параметры
-        if len(self.koef) < self.num_koef:
-            raise RuntimeError("Недостаточно коэффициентов в узле: name={0}".format(self.name))
-        
+        keys=self.get_name_koef()
+        for k in keys:
+            if (k in self.koef)==False:
+                raise RuntimeError("Недстаточно параметров в узле для вычисления")
+                    
         try:
             y_pred=pd.Series(np.nan, index= params['y'].index)
 
@@ -131,16 +141,19 @@ class list_less(list_tree_base):
         self.name='less'
         self.name_feature=name_feature
         self.num_childs=2
-        self.num_koef=1
+        
+        keys=self.get_name_koef()
         self.koef={}
-        if self.num_koef!=len(self.get_name_koef()):
-            raise RuntimeError("Ошибка инициализации узла. Количество коэффициентов не совпадает с количеством имен")
-
+        for k in keys:
+            self.koef[k]=0
+        
     def eval(self, params=None):
         #для общности в каждый узел передаем и параметры и коэффициенты
-        if len(self.koef)<self.num_koef:
-            raise RuntimeError("Недостаточно коэффициентов в узле: name={0}".format(self.name))
-
+        keys=self.get_name_koef()
+        for k in keys:
+            if (k in self.koef)==False:
+                raise RuntimeError("Недстаточно параметров в узле для вычисления")
+            
         try:
             x=params['X'][self.name_feature]
             mask=x<koef['p']
@@ -157,34 +170,33 @@ class list_less(list_tree_base):
 
 
 if __name__=='__main__':
-    # l=list_tree_base()
-    # print(f'get_name: {l.get_name()}')
-    # l.name='test'
-    # l.num_childs=2
-    # l.num_koef=3
-    # l.koef={'p1':-1, 'p2':-2}
+    l=list_tree_base()
+    print(f'get_name: {l.get_name()}')
+    l.name='test'
+    l.num_childs=2
+    l.num_koef=3
+    l.koef={'p1':-1, 'p2':-2}
     
-    # l1=l.copy()
-    # print(f'get_name: {l1.get_name()}')
-    # print(l1.get_name_koef())
-    # print(l1.set_koef( {'p1':-3, 'p2':-4}))
-    # print(l1.get_koef())
+    l1=l.copy()
+    print(f'get_name: {l1.get_name()}')
+    print(l1.get_name_koef())
+    print(l1.get_koef())
     
 
     y=pd.Series(np.arange(0,1, 0.1), index=100*np.arange(0,1, 0.1))
-    # node=list_nom_class(value=1)
-    # rez=node.eval(params={'y':y}, mask=y>0.5)
-    # node1=node.copy()
-    # print(node.get_name())
-    # print(rez)
+    node=list_nom_class(value=1)
+    rez=node.eval(params={'y':y}, mask=y>0.5)
+    node1=node.copy()
+    print(node.get_name())
+    print(rez)
 
-    # node=list_regr_const()
-    # koef={'const':101}
-    # node.set_koef(koef)
-    # rez=node.eval(params={'y':y, }, mask=y<0.5)
-    # node1=node.copy()
-    # print(node.get_name())
-    # print(rez)
+    node=list_regr_const()
+    koef={'const':101}
+    node.set_koef(koef)
+    rez=node.eval(params={'y':y, }, mask=y<0.5)
+    node1=node.copy()
+    print(node.get_name())
+    print(rez)
     
     df=y.copy()
     df=df*1000
