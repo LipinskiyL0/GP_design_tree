@@ -127,4 +127,8 @@ if __name__=='__main__':
     koef1=tree.get_koef()
     print(koef1)
 
+    tree1=tree.copy()
+    koef1=tree1.get_koef()
+    print(koef1)
+
 

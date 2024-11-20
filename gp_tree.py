@@ -9,7 +9,7 @@
 
 import numpy as np
 import pandas as pd
-from gp_list_design_tree import *
+from gp_list import *
 
 class gp_tree:
     def __init__(self, list_T=None, list_F=None, level=0, nom_list='1', type_ini='full',
@@ -110,8 +110,8 @@ class gp_tree:
     #--------------------------------------------------------------------------
     def copy(self):
         #copy текущего узла и всего поддерева
-        
-        tree_list=gp_tree(level=self.level, nom_list=self.nom_list,
+        gp_class=type(self)
+        tree_list=gp_class(level=self.level, nom_list=self.nom_list,
                       type_ini='null', limit_level=0)
         tree_list.list=self.list.copy()
             
