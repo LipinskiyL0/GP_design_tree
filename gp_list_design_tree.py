@@ -62,7 +62,7 @@ class list_tree_base:
         return rez
     
     def get_name(self):
-        return f'{self.name}{self.koef})'
+        return f'{self.name}{self.koef}'
     def get_name_koef(self):
         return []
     def set_koef(self, koef):
@@ -83,8 +83,8 @@ class list_tree_base:
 class list_nom_class (list_tree_base):
     def __init__(self, value=0) -> None:
         self.name='nom_class'
-        self.value=value
         self.num_childs=0
+        self.value=value
         keys=self.get_name_koef()
         self.koef={}
         for k in keys:
@@ -100,6 +100,10 @@ class list_nom_class (list_tree_base):
         y_pred=pd.Series(np.nan, index= params['y'].index)
         y_pred.loc[mask]=self.value
         return y_pred
+    def get_name_koef(self):
+        return []
+    def get_name(self):
+        return f'{self.name}:{self.value}'
     
    
     
@@ -133,6 +137,8 @@ class list_regr_const(list_tree_base):
     
     def get_name_koef(self):
         return ['const']
+    
+    
    
         
 #==============================================================================
@@ -156,7 +162,7 @@ class list_less(list_tree_base):
             
         try:
             x=params['X'][self.name_feature]
-            mask=x<koef['p']
+            mask=x<self.koef['p']
             return mask
         except:
             
@@ -166,6 +172,9 @@ class list_less(list_tree_base):
 
     def get_name_koef(self):
         return ['p']
+    def get_name(self):
+        return f'{self.name}[{self.name_feature},{self.koef}]'
+    
     
 
 

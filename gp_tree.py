@@ -95,7 +95,7 @@ class gp_tree:
         return rez
     #--------------------------------------------------------------------------            
     def eval(self, params):
-        #отображение дерева в строку
+        #вычисление дерева
         if len(self.childs)==0:
             return self.list.eval(params=params)
         else:
@@ -311,7 +311,7 @@ if __name__=='__main__':
     #     tree1.recombination(node, '1.1')
     # print("дерево 3\n",tree1.print_tree())
     
-    print('\n номерация \n', tree1.get_tree_number())
+    # print('\n номерация \n', tree1.get_tree_number())
     
     #==========================================================================
     #проверка корректности мутации

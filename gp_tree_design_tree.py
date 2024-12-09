@@ -2,6 +2,11 @@ import pandas as pd
 import numpy as np
 from gp_tree import gp_tree
 from gp_list_design_tree import *
+from sklearn.metrics import f1_score
+from sklearn.metrics import mean_squared_error as mse
+from scipy.optimize import minimize
+from DivClass import DivClass
+
 class gp_tree_design_tree(gp_tree):
     def __init__(self, list_T=None, list_F=None, level=0, nom_list='1', type_ini='full',
                  limit_level=2, childs=[], cur_list=None) -> None:
@@ -56,8 +61,7 @@ class gp_tree_design_tree(gp_tree):
             
         else:
             raise RuntimeError("Ошибка определения метода инициализации дерева {0}".format(type_ini))
-            return False
-        
+            
         
         self.level=level
         self.nom_list=str(nom_list)
@@ -100,35 +104,127 @@ class gp_tree_design_tree(gp_tree):
             
         if fl==False:
             RuntimeError(f'ошибка установки параметров в узле: {self.nom_list} ')
-        return koef
+        return True
+
+#--------------------------------------------------------------------------            
+    def eval(self, params, mask=[]):
+        #вычисление дерева
+        if len(self.childs)==0:
+            return self.list.eval(params=params, mask=mask)
+        elif len(self.childs)!=2:
+            raise RuntimeError("Количество потомков не равно двум в узле номер: {0}".format(self.nom_list ))
+        else:
+            try:
+                mask0=self.list.eval(params=params)
+                mask1=np.invert(mask0)
+                if len(mask)!=0:
+                    mask0=(mask0 & mask)
+                    mask1=(mask1 & mask)
+            except:
+                raise RuntimeError("Ошибка вычисления узла номер: {0}".format(self.nom_list ))
+
+            #вычисляем левую ветку
+            rez0=self.childs[0].eval(params=params, mask=mask0)
+            rez1=self.childs[1].eval(params=params, mask=mask1)
+            if type(rez0)==pd.core.series.Series:
+                rez0.loc[mask1]=rez1.loc[mask1]
+            elif type(rez0)==np.ndarray:
+                rez0[mask1]=rez1[mask1]
+            
+
+            # childs=[]
+            # for i in range(len(self.childs)):
+            #     childs.append(self.childs[i].eval(params=params))
+        
+        return rez0
+    #--------------------------------------------------------------------------            
+    def predict(self, X):
+        if type(X)!=pd.core.frame.DataFrame:
+            raise RuntimeError('Входящее значение должно быть формата DataFrame')
+        y=np.zeros(len(X))
+        y=pd.Series(y, index=X.index)
+        params={'X':X, 'y':y}
+        y_pred=self.eval(params)
+        return y_pred
+ #--------------------------------------------------------------------------               
+    def score(self, X, y, metric='f1'):
+        y_pred=self.predict(X)
+        if metric=='f1':
+            rez=f1_score(y, y_pred, average='macro')
+        elif metric=='mse':
+            rez=mse(y, y_pred)
+        else:
+            raise RuntimeError('Неизвестная метрика')
+        return rez
+#--------------------------------------------------------------------------               
+    def loss(self, x0, X, y, metric, list_keys):
+        # X=args[0]
+        # y=args[1]
+        # metric=args[2]
+        # list_keys=args[3]
+
+        koef={}
+        for key, x in zip(list_keys, x0):
+            koef[key]=x
+            
+        self.set_koef(koef)
+        e=self.score(X=X, y=y, metric=metric)
+        if metric=='f1':
+            # переворачиваем для минимизации
+            e=1-e 
+        return e
+#--------------------------------------------------------------------------            
+    def fit(self, X, y, metric='f1', restart=True, method='Nelder-Mead'):
+        koef=self.get_koef()
+        list_keys=[]
+        list_x=[]
+        for k in koef:
+            list_keys.append(k)
+            if restart:
+                list_x.append(np.random.rand())
+            else:
+                list_x.append(koef[k])
+        x0=np.array(list_x)  
+        args=(X, y, metric, list_keys)
+        if method=='Nelder-Mead':
+            res = minimize(self.loss, x0, method=method, options={'gtol': 1e-6, 'disp': True},args=args)
+            x1=res.x
+        elif method=='DE':
+            Div=DivClass()
+            Div.inicialization(FitFunct=self.loss, Min=np.zeros(len(x0)), Max=np.ones(len(x0)), args=args)
+            x1=Div.opt(n_iter=100, args=args)   
+
+        # устанавливаем наилучшее решение и возвращаем точность
+        e=self.loss(x1, X, y, metric, list_keys)
+        return e
     
 if __name__=='__main__':
     list_F=[]
+    
     list_F.append(list_less(name_feature='x1' ))
-    
-    
+    list_F.append(list_less(name_feature='x2' ))
     list_T=[]
-    list_T.append(list_nom_class(value=1))
-    list_T.append(list_nom_class(value=2))
-    
+    list_T.append(list_regr_const())
+
     tree=gp_tree_design_tree(list_T=list_T, list_F=list_F, level=0, nom_list='1', type_ini='full',
-                  limit_level=2)
+                    limit_level=2)
     str_tree=tree.print_tree()
-    print('\n')
-    print(str_tree)
 
-    koef=tree.get_koef()
-    print(koef)
-    i=10
-    for k in koef.keys():
-        koef[k]=i
-        i=i+1
-    print(tree.set_koef(koef))
-    koef1=tree.get_koef()
-    print(koef1)
+    # Проверяем функцию fit
+    df=np.random.rand(10,2)
+    df=pd.DataFrame(df, columns=['x1', 'x2'])
+    df['y']=2*df['x1']+3*df['x2']
 
-    tree1=tree.copy()
-    koef1=tree1.get_koef()
-    print(koef1)
+    e=tree.fit(X=df,y=df['y'], method='DE',metric='mse')
+    print(f'loss: {e}')
+    y_pred=tree.predict(X=df)
+    y_pred.name='y_pred'
+    print('Сравниваем "реальны" и вычисленный выходы')
+
+    print(pd.concat([df,y_pred], axis=1))
+    mse_score=tree.score(X=df, y=df['y'], metric='mse')
+    print()
+    print(mse_score)
+    print(tree.print_tree())   
 
 
