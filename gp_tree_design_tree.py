@@ -174,7 +174,7 @@ class gp_tree_design_tree(gp_tree):
             e=1-e 
         return e
 #--------------------------------------------------------------------------            
-    def fit(self, X, y, metric='f1', restart=True, method='Nelder-Mead'):
+    def fit(self, X, y, metric='f1', restart=True, method='Nelder-Mead', iterations=100):
         koef=self.get_koef()
         list_keys=[]
         list_x=[]
@@ -192,7 +192,7 @@ class gp_tree_design_tree(gp_tree):
         elif method=='DE':
             Div=DivClass()
             Div.inicialization(FitFunct=self.loss, Min=np.zeros(len(x0)), Max=np.ones(len(x0)), args=args)
-            x1=Div.opt(n_iter=100, args=args)   
+            x1=Div.opt(n_iter=iterations, args=args)   
 
         # устанавливаем наилучшее решение и возвращаем точность
         e=self.loss(x1, X, y, metric, list_keys)

@@ -18,7 +18,7 @@ from selections import *
 from recombination import *
 
 class gp_algorithm:
-    def __init__(self, n_ind=10, n_iter=5, selection="tournament", n_tur=5,
+    def __init__(self, cl_tree, n_ind=10, n_iter=5, selection="tournament", n_tur=5,
                  recombination="standart", p_mut=0.1, list_T=None, list_F=None, 
                   type_ini='full', limit_level=2, params=None, transfer_best=True ) -> None:
         
@@ -39,14 +39,14 @@ class gp_algorithm:
         for l in list_F+list_T:
             mas_for_mut.append([l,l.get_name(), l.num_childs])
         self.mas_for_mut=pd.DataFrame(mas_for_mut, columns=['list', 'list_name', 'num_childs'])
-        
+        self.cl_tree=cl_tree #определяем класс деревьев
         return
     
     def opt(self):
         #создаем популяцию индивидов
         self.parents=[]
         for i in range(self.n_ind):
-            self.parents.append(gp_tree(list_T=self.list_T, list_F=self.list_F, level=0, nom_list='1',
+            self.parents.append(self.cl_tree(list_T=self.list_T, list_F=self.list_F, level=0, nom_list='1',
                                 type_ini=self.type_ini, limit_level=self.limit_level))
             # print(self.parents[i].print_tree())
             # print(self.parents[i].get_tree_number())
@@ -165,7 +165,7 @@ if __name__=='__main__':
     y=2*(x1**2)+2*x1
     params={'x1':x1, 'y':y}
     
-    gp=gp_algorithm(n_ind=10, n_iter=2, list_T=list_T, list_F=list_F, type_ini='full', limit_level=3, params=params)
+    gp=gp_algorithm(gp_tree,n_ind=10, n_iter=2, list_T=list_T, list_F=list_F, type_ini='full', limit_level=3, params=params)
     
     rez=gp.opt()
     print('лучшая пригодность: ', rez['fit'])

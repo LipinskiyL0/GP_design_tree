@@ -133,6 +133,7 @@ class gp_tree:
             self.list=gp_tree.list.copy()
             self.num_childs=gp_tree.num_childs
             self.childs=gp_tree.childs
+            
             if self.num_childs!=len(self.childs):
                 raise RuntimeError("Ошибка рекомбинации поддерева в узле {0} количество потомков не сходится".format(self.nom_list))
                 return False
