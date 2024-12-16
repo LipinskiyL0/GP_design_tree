@@ -6,6 +6,7 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import mean_squared_error as mse
 from scipy.optimize import minimize
 from DivClass import DivClass
+from bcolors import bcolors
 
 class gp_tree_design_tree(gp_tree):
     def __init__(self, list_T=None, list_F=None, level=0, nom_list='1', type_ini='full',
@@ -108,6 +109,10 @@ class gp_tree_design_tree(gp_tree):
 
 #--------------------------------------------------------------------------            
     def eval(self, params, mask=[]):
+        #Функция производит обход дерева и его вычисление 
+        if len(mask)==0:
+            mask=np.array([True]*len(params['y']))
+            
         #вычисление дерева
         if len(self.childs)==0:
             return self.list.eval(params=params, mask=mask)
@@ -139,16 +144,24 @@ class gp_tree_design_tree(gp_tree):
         return rez0
     #--------------------------------------------------------------------------            
     def predict(self, X):
+        #вычисление дерева. Надстройка над функцией eval для того, что бы соответствовать терминам
+        #sklearn и что бы удобнее пользоваться было
         if type(X)!=pd.core.frame.DataFrame:
             raise RuntimeError('Входящее значение должно быть формата DataFrame')
         y=np.zeros(len(X))
         y=pd.Series(y, index=X.index)
         params={'X':X, 'y':y}
         y_pred=self.eval(params)
+        if np.sum(pd.isnull(y_pred))>0:
+            print(bcolors.FAIL + f'Выход дерева содержит пропуски'+ bcolors.ENDC)
+            print(bcolors.FAIL + self.print_tree()+ bcolors.ENDC)
         return y_pred
  #--------------------------------------------------------------------------               
     def score(self, X, y, metric='f1'):
+        #единственная функция для доступа ко многим метрикам. Используется при обучении дерева и 
+        #при оценке
         y_pred=self.predict(X)
+        
         if metric=='f1':
             rez=f1_score(y, y_pred, average='macro')
         elif metric=='mse':
@@ -158,11 +171,9 @@ class gp_tree_design_tree(gp_tree):
         return rez
 #--------------------------------------------------------------------------               
     def loss(self, x0, X, y, metric, list_keys):
-        # X=args[0]
-        # y=args[1]
-        # metric=args[2]
-        # list_keys=args[3]
-
+        #функция для обучения дерева. Определяет функцию потерь. основывается на стандартных метриках
+        #преобразует метрики в функцию потерь, т.е. чем меньше значение тем лучше. 
+        
         koef={}
         for key, x in zip(list_keys, x0):
             koef[key]=x
@@ -175,6 +186,7 @@ class gp_tree_design_tree(gp_tree):
         return e
 #--------------------------------------------------------------------------            
     def fit(self, X, y, metric='f1', restart=True, method='Nelder-Mead', iterations=100):
+        #обучение дерева - настройка количественных коэффициентов
         koef=self.get_koef()
         list_keys=[]
         list_x=[]
@@ -197,6 +209,24 @@ class gp_tree_design_tree(gp_tree):
         # устанавливаем наилучшее решение и возвращаем точность
         e=self.loss(x1, X, y, metric, list_keys)
         return e
+    def inf_gini(self, y):
+        #Функция для определения информативности узла через коэффициент gini
+        rez=y.value_counts()
+        rez=rez/rez.sum()
+        rez1=1-rez
+        rez2=rez*rez1
+        g=rez2.sum()
+        return g
+    def inf_mse(self, y):
+        #Функция для определения информативности узла через коэффициент mse
+        #хоть тут и нет в явном виде mse но если выполнить все преобразования, то
+        #как раз получим дисперсию.
+        #https://education.yandex.ru/handbook/ml/article/reshayushchiye-derevya
+        
+        g=y.var()
+        return g
+
+
     
 if __name__=='__main__':
     list_F=[]
