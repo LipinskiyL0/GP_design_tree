@@ -209,22 +209,7 @@ class gp_tree_design_tree(gp_tree):
         # устанавливаем наилучшее решение и возвращаем точность
         e=self.loss(x1, X, y, metric, list_keys)
         return e
-    def inf_gini(self, y):
-        #Функция для определения информативности узла через коэффициент gini
-        rez=y.value_counts()
-        rez=rez/rez.sum()
-        rez1=1-rez
-        rez2=rez*rez1
-        g=rez2.sum()
-        return g
-    def inf_mse(self, y):
-        #Функция для определения информативности узла через коэффициент mse
-        #хоть тут и нет в явном виде mse но если выполнить все преобразования, то
-        #как раз получим дисперсию.
-        #https://education.yandex.ru/handbook/ml/article/reshayushchiye-derevya
-        
-        g=y.var()
-        return g
+
 
 
     

@@ -79,6 +79,27 @@ class list_tree_base:
     
     def get_koef(self):
         return self.koef
+    
+    def inf_gini(self, y):
+        #Функция для определения информативности узла через коэффициент gini
+        #https://education.yandex.ru/handbook/ml/article/reshayushchiye-derevya
+
+        rez=y.value_counts()
+        rez=rez/rez.sum()
+        rez1=1-rez
+        rez2=rez*rez1
+        g=rez2.sum()
+        return g
+    
+    def inf_mse(self, y):
+        #Функция для определения информативности узла через коэффициент mse
+        #хоть тут и нет в явном виде mse но если выполнить все преобразования, то
+        #как раз получим дисперсию.
+        #https://education.yandex.ru/handbook/ml/article/reshayushchiye-derevya
+        if len(y)<=1:
+            return 0
+        g=y.var()
+        return g
 
 class list_nom_class (list_tree_base):
     def __init__(self, value=0) -> None:
@@ -104,6 +125,12 @@ class list_nom_class (list_tree_base):
         return []
     def get_name(self):
         return f'{self.name}:{self.value}'
+    def optim_koef(self, mask0,params=None):
+        #учитывая особенности работы текущего узла подбор наилучшего значения осуществляется усреднением всех
+        #значений выхода
+        y0=params['y'].loc[mask0]
+        self.value=y0.value_counts().index[0]
+        return True
     
    
     
@@ -137,6 +164,15 @@ class list_regr_const(list_tree_base):
     
     def get_name_koef(self):
         return ['const']
+    def optim_koef(self, mask0,params=None):
+        #учитывая особенности работы текущего узла подбор наилучшего значения осуществляется усреднением всех
+        #значений выхода
+        y0=params['y'].loc[mask0]
+        name_coef=self.get_name_koef()
+        self.koef[name_coef[0]]=np.mean(y0)
+        return True
+
+        
     
     
    
@@ -174,49 +210,58 @@ class list_less(list_tree_base):
         return ['p']
     def get_name(self):
         return f'{self.name}[{self.name_feature},{self.koef}]'
+    def optim_koef(self, mask0,params=None, inf_name='gini' ):
+        #учитывая особенности работы текущего узла можем реализовать подбор оптимального коэффициента
+        #через перебор
+        #находим нужный признак, находим уникальные значения признака и берем середины интервалов между значений
+        unuc_val=params['X'][self.name_feature].unique()
+        unuc_val=np.sort(unuc_val)
+        unuc_val1=(unuc_val[1:]+unuc_val[0:-1])/2
+        koef_name=self.get_name_koef()[0]
+        flag=0
+        for p in unuc_val1:
+            self.set_koef({koef_name:p})
+            mask=self.eval(params)
+            mask_inv=np.invert(mask)
+            y0=params['y'].loc[mask0]
+            y1=params['y'].loc[mask & mask0]
+            y2=params['y'].loc[mask_inv & mask0]
+            if inf_name=='gini':
+                inf_y0=self.inf_gini(y0)
+                inf_y1=self.inf_gini(y1)
+                inf_y2=self.inf_gini(y2)
+            elif inf_name=='mse':
+                inf_y0=self.inf_mse(y0)
+                inf_y1=self.inf_mse(y1)
+                inf_y2=self.inf_mse(y2)
+            inf_rez=inf_y0-(len(y1)*(inf_y1)/len(y0)+len(y2)*(inf_y2)/len(y0))
+            if flag==0:
+                best_inf_rez=inf_rez
+                best_koef=p
+                flag=1
+            elif best_inf_rez<inf_rez:
+                best_inf_rez=inf_rez
+                best_koef=p
+        self.set_koef({koef_name:best_koef})
+        return True
     
     
 
 
 if __name__=='__main__':
-    l=list_tree_base()
-    print(f'get_name: {l.get_name()}')
-    l.name='test'
-    l.num_childs=2
-    l.num_koef=3
-    l.koef={'p1':-1, 'p2':-2}
-    
-    l1=l.copy()
-    print(f'get_name: {l1.get_name()}')
-    print(l1.get_name_koef())
-    print(l1.get_koef())
-    
+    df=pd.Series(np.arange(1,0, -0.1), index=100*np.arange(0,1, 0.1))
 
-    y=pd.Series(np.arange(0,1, 0.1), index=100*np.arange(0,1, 0.1))
-    node=list_nom_class(value=1)
-    rez=node.eval(params={'y':y}, mask=y>0.5)
-    node1=node.copy()
-    print(node.get_name())
-    print(rez)
-
-    node=list_regr_const()
-    koef={'const':101}
-    node.set_koef(koef)
-    rez=node.eval(params={'y':y, }, mask=y<0.5)
-    node1=node.copy()
-    print(node.get_name())
-    print(rez)
-    
-    df=y.copy()
-    df=df*1000
     df.name='x1'
     df=df.reset_index()
-    node=list_less(name_feature='x1' )
-    node1=node.copy()
-    koef={'p':101}
-    node.set_koef(koef)
-    rez=node.eval(params={'X':df,'y':y}  )
-    print(node.get_name())
+    y=pd.Series(np.zeros(len(df), dtype=int))
+    y.loc[df['x1']>0.5]=1
+
+    node=list_regr_const( )
+
+    mask=np.array([True]*len(df))
+
+    rez=node.optim_koef(params={'X':df,'y':y}, mask0=mask)
+
     print(rez)
     print(df)
     
