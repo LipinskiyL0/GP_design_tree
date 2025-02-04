@@ -75,9 +75,12 @@ class gp_tree_design_tree(gp_tree):
                 raise RuntimeError("В методе роста LearnID3 выборка y не формата pd.Series")
             
 
-
-            params['list_T']=list_T
-            params['list_F']=list_F
+            if params['list_T'] is None:
+                params['list_T']=list_T
+            if params['list_F'] is None:
+                list_F_temp=pd.Series(list_F)
+                list_F_temp=list_F_temp.sample(params['n_features'])
+                params['list_F']=list(list_F_temp)
             rez=self.LearnID3(params)
             self.list=rez['list']
             self.level=level
@@ -327,7 +330,8 @@ if __name__=='__main__':
     X=pd.DataFrame(X, columns=data.feature_names)
     y=data.target
     y=pd.Series(y, name='y')
-    params={'X':X, 'y':y,'mask':None,'epsilon':1e-10, 'num_samples':4,'inf_name':'gini' }
+    params={'X':X, 'y':y,'mask':None,'epsilon':1e-10, 'num_samples':4,'inf_name':'gini', 'list_F':None, 'list_T':None,
+            'n_features':2 }
     list_T=[]
     for c in y.unique():
         list_T.append(list_nom_class(value=c))

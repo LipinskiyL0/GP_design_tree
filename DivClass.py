@@ -80,8 +80,8 @@ class DivClass:
             mask=fit_new<self.fit
             self.pop[mask, :]=mut_pop[mask, :]
             self.fit[mask]=fit_new[mask]
-            print("iteration {3}: min={0}, mean={1}, max={2}".format(np.min(self.fit),np.mean(self.fit),
-                                        np.max(self.fit), i+1)) 
+            # print("iteration {3}: min={0}, mean={1}, max={2}".format(np.min(self.fit),np.mean(self.fit),
+            #                             np.max(self.fit), i+1)) 
             ind=np.argmin(self.fit)
 
         return self.pop[ind, :]
