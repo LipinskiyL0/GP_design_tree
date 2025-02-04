@@ -34,6 +34,9 @@
 
 import numpy as np
 import  pandas as pd
+from sklearn.metrics import f1_score
+from sklearn.metrics import mean_squared_error as mse
+from sklearn.metrics import r2_score
 
 class list_tree_base:
     def __init__(self) -> None:
@@ -100,6 +103,18 @@ class list_tree_base:
             return 0
         g=y.var()
         return g
+    def score(self, y_true, y_pred, metric='f1'):
+        #единственная функция для доступа ко многим метрикам. Используется при обучении дерева и 
+        #при оценке
+        
+        
+        if metric=='f1':
+            rez=f1_score(y_true, y_pred, average='macro')
+        elif metric=='r2_score':
+            rez=r2_score(y_true, y_pred)
+        else:
+            raise RuntimeError('Неизвестная метрика')
+        return rez
 
 class list_nom_class (list_tree_base):
     def __init__(self, value=0) -> None:
@@ -126,11 +141,14 @@ class list_nom_class (list_tree_base):
     def get_name(self):
         return f'{self.name}:{self.value}'
     def optim_koef(self, mask0,params=None):
-        #учитывая особенности работы текущего узла подбор наилучшего значения осуществляется усреднением всех
+        #учитывая особенности работы текущего узла подбор наилучшего значения осуществляется выбором мажоритарного класса
         #значений выхода
         y0=params['y'].loc[mask0]
         self.value=y0.value_counts().index[0]
-        return True
+        y_true=y0
+        y_pred=np.full(len(y_true), self.value)
+        rez=self.score( y_true, y_pred, metric='f1')
+        return {'score':rez, 'inf_gate':False}
     
    
     
@@ -170,7 +188,12 @@ class list_regr_const(list_tree_base):
         y0=params['y'].loc[mask0]
         name_coef=self.get_name_koef()
         self.koef[name_coef[0]]=np.mean(y0)
-        return True
+        y_true=y0
+        y_pred=np.full(len(y_true), self.koef[name_coef[0]])
+        rez=self.score( y_true, y_pred, metric='r2_score')
+
+        return {'score':rez, 'inf_gate':False}
+        
 
         
     
@@ -214,7 +237,9 @@ class list_less(list_tree_base):
         #учитывая особенности работы текущего узла можем реализовать подбор оптимального коэффициента
         #через перебор
         #находим нужный признак, находим уникальные значения признака и берем середины интервалов между значений
-        unuc_val=params['X'][self.name_feature].unique()
+        if (self.name_feature in params['X'].columns)==False:
+            raise RuntimeError(f'Отсутсвует признак {self.name_feature} в таблице данных' )
+        unuc_val=params['X'][self.name_feature].loc[mask0].unique()
         unuc_val=np.sort(unuc_val)
         unuc_val1=(unuc_val[1:]+unuc_val[0:-1])/2
         koef_name=self.get_name_koef()[0]
@@ -238,12 +263,17 @@ class list_less(list_tree_base):
             if flag==0:
                 best_inf_rez=inf_rez
                 best_koef=p
+                best_mask0=(mask & mask0).copy()
+                best_mask1=(mask_inv & mask0).copy()
                 flag=1
             elif best_inf_rez<inf_rez:
                 best_inf_rez=inf_rez
                 best_koef=p
+                best_mask0=(mask & mask0).copy()
+                best_mask1=(mask_inv & mask0).copy()
         self.set_koef({koef_name:best_koef})
-        return True
+        return {'score':False, 'inf_gate':best_inf_rez, 'mask0':best_mask0, 'mask1':best_mask1}
+    
     
     
 

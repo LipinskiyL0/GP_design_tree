@@ -7,10 +7,11 @@ from sklearn.metrics import mean_squared_error as mse
 from scipy.optimize import minimize
 from DivClass import DivClass
 from bcolors import bcolors
+from sklearn.datasets import load_iris
 
 class gp_tree_design_tree(gp_tree):
     def __init__(self, list_T=None, list_F=None, level=0, nom_list='1', type_ini='full',
-                 limit_level=2, childs=[], cur_list=None) -> None:
+                 limit_level=2, childs=[], cur_list=None, params=None) -> None:
         
         #происходит инициализация дерева рекурсивным способом
         if type_ini=='full':
@@ -59,7 +60,52 @@ class gp_tree_design_tree(gp_tree):
             self.childs=childs
             self.num_koef=cur_list.num_koef
             return
+
+        elif type_ini=='LearnID3':
+            if pd.isnull(params)==True:
+                raise RuntimeError("В методе роста LearnID3 отсутствует выборка")
+            if ('X'in params) == False:
+                raise RuntimeError("В методе роста LearnID3 с параметрами не передается выборка X")
+            if type(params['X']) != pd.core.frame.DataFrame:
+                raise RuntimeError("В методе роста LearnID3 выборка X не формата DataFrame")
             
+            if ('y'in params) == False:
+                raise RuntimeError("В методе роста LearnID3 с параметрами не передается выборка y")
+            if type(params['y']) != pd.core.series.Series:
+                raise RuntimeError("В методе роста LearnID3 выборка y не формата pd.Series")
+            
+
+
+            params['list_T']=list_T
+            params['list_F']=list_F
+            rez=self.LearnID3(params)
+            self.list=rez['list']
+            self.level=level
+            self.nom_list=str(nom_list)
+            self.childs=[]
+            self.num_childs=self.list.num_childs
+            
+            if self.num_childs==0:
+                # достигли терминального узла. возвращаемся
+                return
+            if self.num_childs!=2:
+                raise RuntimeError('количество потомков не равно двум. LearnID3 на это не рассчитана')
+            params0=params.copy()
+            params0['mask']=rez['mask0']
+
+            params1=params.copy()
+            params1['mask']=rez['mask1']
+            Params=[params0, params1]
+
+            #иначе продолжаем
+            for i, p in enumerate(Params):
+                сhild= gp_tree_design_tree(list_T=list_T, list_F=list_F, level=level+1, nom_list=nom_list+'.'+str(i+1),
+                            type_ini=type_ini, limit_level=limit_level, params=p)
+                self.childs.append(сhild)
+            
+            return
+
+
         else:
             raise RuntimeError("Ошибка определения метода инициализации дерева {0}".format(type_ini))
             
@@ -209,35 +255,102 @@ class gp_tree_design_tree(gp_tree):
         # устанавливаем наилучшее решение и возвращаем точность
         e=self.loss(x1, X, y, metric, list_keys)
         return e
+    
+    def LearnID3(self, params):
+        # В данной функции реализован метод выращивания дерева через процедуру ID3
+        X=params['X']
+        y=params['y']
+        list_F=params['list_F']
+        list_T=params['list_T']
+        mask=params['mask']
+        epsilon=params['epsilon']
+        num_samples=params['num_samples']
+        inf_name=params['inf_name']
+
+        if mask is None:
+            mask=np.full(len(y), True)
+        
+        # Если все объекты лежат в одном классе или равны одному числу, то делаем конечый (терминальный) узел
+        # Если количество точек в узле меньше порогового
+        if (y.loc[mask].var()<=epsilon) | (sum(mask)<num_samples):
+            rez=self.get_optim_list_T(y, list_T, mask)
+            
+        # Находим предикат с максимальным информационным выигрышем
+        else:
+            rez=self.get_optim_list_F(X, y, list_F, mask, inf_name)
+        return rez
+    
+    def get_optim_list_T(self, y, list_T, mask):
+        #Функция ищет простым перебором наилучшее решение из терминальных листов
+        flag=False
+        # mask=np.full(len(y), True)
+        for li in list_T:
+            rez=li.optim_koef(params={'y':y}, mask0=mask)
+            if flag==False:
+                best_score=rez['score']
+                best_list=li.copy()
+                flag=True
+            elif best_score<rez['score']:
+                best_score=rez['score']
+                best_list=li.copy()
+        return {'score':best_score, 'list':best_list, 'mask0':None, 'mask1':None}
+    
+    def get_optim_list_F(self, X, y, list_F,mask, inf_name):
+        #Функция ищет простым перебором наилучшее решение из функциональных листов
+        flag=False
+        # mask=np.full(len(y), True)
+        for li in list_F:
+            rez=li.optim_koef(params={'X':X,'y':y}, mask0=mask, inf_name=inf_name )
+            if flag==False:
+                best_inf=rez['inf_gate']
+                best_list=li.copy()
+                best_mask0=rez['mask0']
+                best_mask1=rez['mask1']
+                flag=True
+            elif best_inf<rez['inf_gate']:
+                best_inf=rez['inf_gate']
+                best_list=li.copy()
+                best_mask0=rez['mask0']
+                best_mask1=rez['mask1']
+        return {'inf_gate':best_inf, 'list':best_list, 'mask0':best_mask0, 'mask1':best_mask1}
+
+
 
 
 
     
 if __name__=='__main__':
-    list_F=[]
     
-    list_F.append(list_less(name_feature='x1' ))
-    list_F.append(list_less(name_feature='x2' ))
+
+    data = load_iris()
+    X=data.data
+    X=pd.DataFrame(X, columns=data.feature_names)
+    y=data.target
+    y=pd.Series(y, name='y')
+    params={'X':X, 'y':y,'mask':None,'epsilon':1e-10, 'num_samples':4,'inf_name':'gini' }
     list_T=[]
-    list_T.append(list_regr_const())
-
-    tree=gp_tree_design_tree(list_T=list_T, list_F=list_F, level=0, nom_list='1', type_ini='full',
-                    limit_level=2)
+    for c in y.unique():
+        list_T.append(list_nom_class(value=c))
+    list_F=[]
+    for c in X.columns:
+        list_F.append(list_less(name_feature=c ))
+    tree=gp_tree_design_tree(list_T=list_T, list_F=list_F, level=0, nom_list='1', type_ini='LearnID3',
+                    limit_level=2, params=params)
     str_tree=tree.print_tree()
-
+    print(str_tree)
+    e=tree.score(X=X, y=y, metric='f1')
+    print(f'точность работы на исходном дереве: {e}')
     # Проверяем функцию fit
-    df=np.random.rand(10,2)
-    df=pd.DataFrame(df, columns=['x1', 'x2'])
-    df['y']=2*df['x1']+3*df['x2']
-
-    e=tree.fit(X=df,y=df['y'], method='DE',metric='mse')
+    e=tree.fit(X=X,y=y, method='DE',metric='f1')
     print(f'loss: {e}')
-    y_pred=tree.predict(X=df)
+    e=tree.score(X=X, y=y, metric='f1')
+    print(f'точность работы на исходном дереве: {e}')
+    y_pred=tree.predict(X=X)
     y_pred.name='y_pred'
     print('Сравниваем "реальны" и вычисленный выходы')
 
-    print(pd.concat([df,y_pred], axis=1))
-    mse_score=tree.score(X=df, y=df['y'], metric='mse')
+    print(pd.concat([X, y,y_pred], axis=1))
+    mse_score=tree.score(X=X, y=y, metric='f1')
     print()
     print(mse_score)
     print(tree.print_tree())   
