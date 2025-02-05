@@ -75,9 +75,9 @@ class gp_tree_design_tree(gp_tree):
                 raise RuntimeError("В методе роста LearnID3 выборка y не формата pd.Series")
             
 
-            if params['list_T'] is None:
+            if level == 0:
                 params['list_T']=list_T
-            if params['list_F'] is None:
+            if level == 0:
                 list_F_temp=pd.Series(list_F)
                 list_F_temp=list_F_temp.sample(params['n_features'])
                 params['list_F']=list(list_F_temp)
@@ -330,10 +330,6 @@ class gp_tree_design_tree(gp_tree):
         if fl_success==False:
             return {'fl_success': False}
         return {'inf_gate':best_inf, 'list':best_list, 'mask0':best_mask0, 'mask1':best_mask1, 'fl_success': True}
-
-
-
-
 
     
 if __name__=='__main__':

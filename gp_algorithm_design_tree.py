@@ -12,7 +12,10 @@ class gp_algorithm_design_tree (gp_algorithm):
                    metric=params['score_metric'], iterations=params['iterations'])
         
         fit=1/(1+e)
-        
+        num_node=tree.get_num_node()
+        fit=fit-0.01*num_node
+        if fit<0:
+            fit=0
         return fit
 if __name__ == '__main__':
    
@@ -23,7 +26,9 @@ if __name__ == '__main__':
     X=pd.DataFrame(X, columns=data.feature_names)
     y=data.target
     y=pd.Series(y, name='y')
-    params={'X':X, 'y':y,'method':'DE','score_metric':'f1','iterations':20   }
+    # params={'X':X, 'y':y,'method':'DE','score_metric':'f1','iterations':20   }
+    params={'X':X, 'y':y,'mask':None,'epsilon':1e-10, 'num_samples':4,'inf_name':'gini', 'list_F':None, 'list_T':None,
+            'n_features':2,'method':'DE','score_metric':'f1','iterations':20  }
     list_T=[]
     for c in y.unique():
         list_T.append(list_nom_class(value=c))
@@ -38,3 +43,5 @@ if __name__ == '__main__':
     rez=gp.opt()
     print('лучшая пригодность: ', rez['fit'])
     print('лучшее решение: ', rez['individ'].print_tree())
+    e=rez['individ'].score(X=X, y=y, metric='f1')
+    print(f'точность работы на исходном дереве: {e}')

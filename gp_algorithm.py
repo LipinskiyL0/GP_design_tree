@@ -47,7 +47,7 @@ class gp_algorithm:
         self.parents=[]
         for i in range(self.n_ind):
             self.parents.append(self.cl_tree(list_T=self.list_T, list_F=self.list_F, level=0, nom_list='1',
-                                type_ini=self.type_ini, limit_level=self.limit_level))
+                                type_ini=self.type_ini, limit_level=self.limit_level, params=self.params))
             # print(self.parents[i].print_tree())
             # print(self.parents[i].get_tree_number())
             

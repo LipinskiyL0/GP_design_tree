@@ -13,7 +13,7 @@ from gp_list import *
 
 class gp_tree:
     def __init__(self, list_T=None, list_F=None, level=0, nom_list='1', type_ini='full',
-                 limit_level=2, childs=[], cur_list=None) -> None:
+                 limit_level=2, childs=[], cur_list=None, params=None) -> None:
         
         #происходит инициализация дерева рекурсивным способом
         if type_ini=='full':
