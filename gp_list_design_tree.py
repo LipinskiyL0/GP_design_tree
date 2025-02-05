@@ -242,6 +242,9 @@ class list_less(list_tree_base):
         unuc_val=params['X'][self.name_feature].loc[mask0].unique()
         unuc_val=np.sort(unuc_val)
         unuc_val1=(unuc_val[1:]+unuc_val[0:-1])/2
+        if len(unuc_val1)<1:
+            return {'fl_success':False}
+
         koef_name=self.get_name_koef()[0]
         flag=0
         for p in unuc_val1:
@@ -272,7 +275,7 @@ class list_less(list_tree_base):
                 best_mask0=(mask & mask0).copy()
                 best_mask1=(mask_inv & mask0).copy()
         self.set_koef({koef_name:best_koef})
-        return {'score':False, 'inf_gate':best_inf_rez, 'mask0':best_mask0, 'mask1':best_mask1}
+        return {'score':False, 'inf_gate':best_inf_rez, 'mask0':best_mask0, 'mask1':best_mask1, 'fl_success':True}
     
     
     

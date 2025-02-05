@@ -281,6 +281,13 @@ class gp_tree_design_tree(gp_tree):
         # Находим предикат с максимальным информационным выигрышем
         else:
             rez=self.get_optim_list_F(X, y, list_F, mask, inf_name)
+            # если поиск закончился неудачно, то ставим терминальный узел
+            if rez['fl_success']==False:
+                rez=self.get_optim_list_T(y, list_T, mask)
+            # если одна из веток содержит объектов меньше чем num_samples ставим терминальный узел
+            if (sum(rez['mask0'])< num_samples) | (sum(rez['mask1'])< num_samples):
+                rez=self.get_optim_list_T(y, list_T, mask)
+
         return rez
     
     def get_optim_list_T(self, y, list_T, mask):
@@ -301,21 +308,28 @@ class gp_tree_design_tree(gp_tree):
     def get_optim_list_F(self, X, y, list_F,mask, inf_name):
         #Функция ищет простым перебором наилучшее решение из функциональных листов
         flag=False
+        fl_success=False
         # mask=np.full(len(y), True)
         for li in list_F:
             rez=li.optim_koef(params={'X':X,'y':y}, mask0=mask, inf_name=inf_name )
+            if rez['fl_success']==False:
+                continue
             if flag==False:
                 best_inf=rez['inf_gate']
                 best_list=li.copy()
                 best_mask0=rez['mask0']
                 best_mask1=rez['mask1']
                 flag=True
+                fl_success=True
             elif best_inf<rez['inf_gate']:
                 best_inf=rez['inf_gate']
                 best_list=li.copy()
                 best_mask0=rez['mask0']
                 best_mask1=rez['mask1']
-        return {'inf_gate':best_inf, 'list':best_list, 'mask0':best_mask0, 'mask1':best_mask1}
+        
+        if fl_success==False:
+            return {'fl_success': False}
+        return {'inf_gate':best_inf, 'list':best_list, 'mask0':best_mask0, 'mask1':best_mask1, 'fl_success': True}
 
 
 
