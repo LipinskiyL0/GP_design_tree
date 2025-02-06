@@ -7,3 +7,13 @@
 	Что бы "держать" дерево мы "держим" корневой узел, в котором содержатся потомки, в которых содержатся потомки и т.д. 
 
 3. gp_algorithm класс для реализации эволюции над gp_tree
+
+# gp_algorithm_design_tree
+реализован алгоритм GP для поиска эффективных деревьев решения
+1. list_tree_base - базовый лист представляющий собой вычислительную часть дерева решений. От него наследуются остальные вычислительные листы:
+					list_nom_class, list_regr_const, list_less
+2. gp_tree_design_tree наследуется от gp_tree. Класс для описания навигации по дереву под задачу поиска деревьев решений. 
+3. gp_algorithm_design_tree - наследуется от gp_algorithm. Заточено под работу с деревьями решения
+4. test_list_design_tree.jpynb - блокнот файл для экспериментов над классом list_tree_base
+5. test_tree_design_tree.jpynb - блокнот для экспериментов над классом gp_tree_design_tree
+6. test_gp_algorithm-design_tree.jpynb - блокнот для экспериментов над классом gp_algorithm_design_tree

@@ -1,3 +1,73 @@
+'''
+В данном классе реализован узел дерева со всей необходимой механникой. 
+В классе решаются две задачи: 
+1. Вычислительная часть. За нее отвечает объект одного из типов, описанных в gp_list_design_tree.py. Вся вычислительная
+    часть реализуется в gp_list_design_tree.py, а здесть только вызывается. 
+2. Навигация по дереву и эволюционные операторы. Вот эта часть описывается в классе gp_tree_design_tree.
+
+основные объекты: 
+self.list - объект типа gp_list_design_tree.py в котором реализована вычислительная часть текущего узла
+self.level - уровень текущего узла начиная с нуля
+self.nom_list - номер текущего узла. В основном используется при сопоставлении деревьев при рекомбинации, а также 
+                для задания уникального имени числовому параметру узла при оптимизации дерева
+self.childs - список узлов этого же типа gp_tree_design_tree представляющих собой потомков для текущего узла,
+                который для них является родительским. Потомки в свою очередь содержат в себе своих потомков и т.д. 
+self.num_childs - количество потомков, т.е. длина массива self.childs. Ну это некоторая дань C++
+
+Основные методы и их параметры
+                
+def __init__(self, list_T=None, list_F=None, level=0, nom_list='1', type_ini='full',
+                 limit_level=2, childs=[], cur_list=None, params=None) -> None:
+            list_T - список терминальных узлов
+            list_F - список функциональных узлов
+            level -  уровень текущего узла в дереве начиная с нуля
+            nom_list - глобальный номер узла в дереве начиная с 1. Номера потомков: 1.1 и 1.2. Номера их потомков
+                        1.1.1, 1.1.2, 1.2.1 и 1.2.2 и т.д. 
+            type_ini - тип инициализации дерева. Есть два стандартных способа роста: full - полное, nofull - не полное
+                    кроме тоого есть: null - инициализация пустого узла, manual - ручная точечная инициализация узла,
+                    LearnID3 - жадная стратегия роста дерева. 
+def get_koef(self) - Функция возвращает коэффициенты текущего узла и всего поддерева целиком в виде словаря
+def set_koef(self, koef) - Функция устанавливает коэффициенты в текущий узел из словаря koef
+                            определяем ключи, которые должны быть в данном узле
+def eval(self, params, mask=[]) - Функция производит обход дерева и его вычисление 
+                                  mask - массив со значениями True/False. Вычисление узла происходит только для тех
+                                  объектов выборки для которых mask==True
+def predict(self, X): - вычисление дерева. Надстройка над функцией eval для того, что бы соответствовать терминам
+                        sklearn и что бы удобнее пользоваться было
+def score(self, X, y, metric='f1'): - единственная функция для доступа ко многим метрикам. Используется при обучении дерева и 
+                                    при оценке
+def loss(self, x0, X, y, metric, list_keys): функция для обучения дерева. Определяет функцию потерь. основывается на стандартных метриках
+                                            преобразует метрики в функцию потерь, т.е. чем меньше значение тем лучше. 
+                                            x0 - массив количественных коэффициентов узлов, для которых вычисляется функция.
+                                                эти коэффициенты устанавливаются на дерево после чего проихсодт оценка точности
+                                            X - входы
+                                            y - выходы
+                                            metric - метрика потерь
+                                            list_keys - список имен коэффициентов, что бы знать какой коэффициент в какой узел 
+                                                        устанавливать
+def fit(self, X, y, metric='f1', restart=True, method='Nelder-Mead', iterations=100, inf_name='gini'):
+        #обучение дерева - настройка количественных коэффициентов. Функция приеняет алгорит оптимизации и минимизирует
+        loss функцию
+        X - входы
+        y - выходы
+        metric - метрика потерь
+        restart - флаг рестарта - испльзуется только в методе Нелдера-Мида. Что бы поиск стартовал с текущих значений
+                по умолчанию коэффициенты обучаются с нуля.
+        method - метод оптимизации. Включая самооптимизацию, которая подбирает наилучшие значения за счет 
+                функций локальной самооптимизации узлов def optim_koef(self, mask0,params=None): классов в 
+                gp_list_design_tree.py
+        iterations - параметр количества итерация для итерационных методов
+        inf_name - параметр метрики информативности разбиения, который используется в локальнй самооптимизации узла
+def LearnID3(self, params): - процедура в которой реализована стратегия жадного роста дерева
+def get_optim_list_T(self, y, list_T, mask): Функция ищет простым перебором наилучшее решение из
+                                             терминальных листов используется в LearnID3
+
+def get_optim_list_F(self, X, y, list_F,mask, inf_name): - Функция ищет простым перебором наилучшее решение из
+                                             функциональных листов используется в LearnID3
+                                            
+
+'''
+
 import pandas as pd
 import numpy as np
 from gp_tree import gp_tree
@@ -234,7 +304,7 @@ class gp_tree_design_tree(gp_tree):
             e=1-e 
         return e
 #--------------------------------------------------------------------------            
-    def fit(self, X, y, metric='f1', restart=True, method='Nelder-Mead', iterations=100):
+    def fit(self, X, y, metric='f1', restart=True, method='Nelder-Mead', iterations=100, inf_name='gini'):
         #обучение дерева - настройка количественных коэффициентов
         koef=self.get_koef()
         list_keys=[]
@@ -252,12 +322,51 @@ class gp_tree_design_tree(gp_tree):
             x1=res.x
         elif method=='DE':
             Div=DivClass()
-            Div.inicialization(FitFunct=self.loss, Min=np.zeros(len(x0)), Max=np.ones(len(x0)), args=args)
-            x1=Div.opt(n_iter=iterations, args=args)   
+            Div.inicialization(FitFunct=self.loss, Min=np.zeros(len(x0)), Max=np.ones(len(x0)), args=args, n_ind=100)
+            x1=Div.opt(n_iter=iterations, args=args)  
+        elif method=='self_optimization':
+            params={'X':X, 'y':y, 'inf_name':inf_name,'mask':np.full(len(y), True) }
+            self.self_optimization(params)
+            koef=self.get_koef()
+            x1=[]
+            for k in koef:
+                x1.append(koef[k])
+
+        else:
+            raise RuntimeError(f'неизвестный метод оптимизации: {method}')
+ 
 
         # устанавливаем наилучшее решение и возвращаем точность
         e=self.loss(x1, X, y, metric, list_keys)
         return e
+    def self_optimization(self, params):
+        y=params['y']
+        X=params['X']
+        inf_name=params['inf_name']
+
+        mask=params['mask']
+        if self.num_childs==0:
+            # терминальный узел
+            rez=self.list.optim_koef(params={'y':y}, mask0=mask)
+        elif self.num_childs==2:
+            # функциональный узел с двумя потомками
+            rez=self.list.optim_koef(params={'X':X,'y':y}, mask0=mask, inf_name=inf_name )
+            # if rez['fl_success']==False:
+            #     print(f'Ошибка оптимизации узла в процедуре самооптимизации: номер узла {self.nom_list}')
+
+            params0=params.copy()
+            params0['mask']=rez['mask0']
+
+            params1=params.copy()
+            params1['mask']=rez['mask1']
+            Params=[params0, params1]
+
+           
+            for i, p in enumerate(Params):
+                self.childs[i].self_optimization(p)
+        else:
+            raise RuntimeError(f'Ошибка в процедуре самооптимизации, неизвестное количество потомков: {self.num_childs}')
+        return
     
     def LearnID3(self, params):
         # В данной функции реализован метод выращивания дерева через процедуру ID3
@@ -285,7 +394,7 @@ class gp_tree_design_tree(gp_tree):
             if rez['fl_success']==False:
                 rez=self.get_optim_list_T(y, list_T, mask)
             # если одна из веток содержит объектов меньше чем num_samples ставим терминальный узел
-            if (sum(rez['mask0'])< num_samples) | (sum(rez['mask1'])< num_samples):
+            elif (sum(rez['mask0'])< num_samples) | (sum(rez['mask1'])< num_samples):
                 rez=self.get_optim_list_T(y, list_T, mask)
 
         return rez
@@ -341,7 +450,7 @@ if __name__=='__main__':
     y=data.target
     y=pd.Series(y, name='y')
     params={'X':X, 'y':y,'mask':None,'epsilon':1e-10, 'num_samples':4,'inf_name':'gini', 'list_F':None, 'list_T':None,
-            'n_features':2 }
+            'n_features':4 }
     list_T=[]
     for c in y.unique():
         list_T.append(list_nom_class(value=c))
@@ -355,7 +464,7 @@ if __name__=='__main__':
     e=tree.score(X=X, y=y, metric='f1')
     print(f'точность работы на исходном дереве: {e}')
     # Проверяем функцию fit
-    e=tree.fit(X=X,y=y, method='DE',metric='f1')
+    e=tree.fit(X=X,y=y, method='self_optimization',metric='f1', inf_name='gini')
     print(f'loss: {e}')
     e=tree.score(X=X, y=y, metric='f1')
     print(f'точность работы на исходном дереве: {e}')

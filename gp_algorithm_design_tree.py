@@ -1,3 +1,10 @@
+'''
+В данном файле описан класс реализующий генетическое программирование для поиска эффективных 
+деревьев решения, которое наследуется от базового класса ГП gp_algorithm
+Основное отличие в вычислении функции пригодности
+'''
+
+
 from gp_algorithm import gp_algorithm
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error
@@ -28,7 +35,7 @@ if __name__ == '__main__':
     y=pd.Series(y, name='y')
     # params={'X':X, 'y':y,'method':'DE','score_metric':'f1','iterations':20   }
     params={'X':X, 'y':y,'mask':None,'epsilon':1e-10, 'num_samples':4,'inf_name':'gini', 'list_F':None, 'list_T':None,
-            'n_features':2,'method':'DE','score_metric':'f1','iterations':20  }
+            'n_features':1,'method':'self_optimization','score_metric':'f1','iterations':50  }
     list_T=[]
     for c in y.unique():
         list_T.append(list_nom_class(value=c))
@@ -36,8 +43,8 @@ if __name__ == '__main__':
     for c in X.columns:
         list_F.append(list_less(name_feature=c ))
     
-    gp=gp_algorithm_design_tree(gp_tree_design_tree, n_ind=10, n_iter=5,
-                                 list_T=list_T, list_F=list_F, type_ini='full',
+    gp=gp_algorithm_design_tree(gp_tree_design_tree, n_ind=20, n_iter=20,
+                                 list_T=list_T, list_F=list_F, type_ini='LearnID3',
                                    limit_level=4, params=params)
     
     rez=gp.opt()

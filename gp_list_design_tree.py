@@ -29,6 +29,17 @@
     set_koef функция устанавливает коэффициенты в узел
     get_koef функция копирует коэффициенты из узла
 
+    специфичный для задачи функции
+    inf_gini(self, y) -расчет метрики gini для текущего узла (для задачи классификации)
+    inf_mse(self, y) - расчет метрики mse (для задачи регрессии)
+    score(self, y_true, y_pred, metric='f1') - расчет точности в соответсвиии с метрикой
+
+    На текущий момент на базе базового узла построено три узла. 
+    list_nom_class - терминальный узел соответствующий номеру класса в задаче классификации
+    list_regr_const - терминальный узел соотвествующий константе в задаче регрессии
+    list_less - функциональный узел соотвествующий оператору сравнения "<" 
+    Для каждого узла реализована функция 
+    optim_koef(self, mask0,params=None) - позволяющая проводить настройку количественного параметра в узле
 
 '''
 
@@ -144,11 +155,15 @@ class list_nom_class (list_tree_base):
         #учитывая особенности работы текущего узла подбор наилучшего значения осуществляется выбором мажоритарного класса
         #значений выхода
         y0=params['y'].loc[mask0]
+        if len(y0)==0:
+            self.value=0
+            return {'score':0, 'inf_gate':False, 'fl_success':False}
+        
         self.value=y0.value_counts().index[0]
         y_true=y0
         y_pred=np.full(len(y_true), self.value)
         rez=self.score( y_true, y_pred, metric='f1')
-        return {'score':rez, 'inf_gate':False}
+        return {'score':rez, 'inf_gate':False, 'fl_success':True}
     
    
     
@@ -185,19 +200,20 @@ class list_regr_const(list_tree_base):
     def optim_koef(self, mask0,params=None):
         #учитывая особенности работы текущего узла подбор наилучшего значения осуществляется усреднением всех
         #значений выхода
-        y0=params['y'].loc[mask0]
         name_coef=self.get_name_koef()
+        
+        y0=params['y'].loc[mask0]
+
+        if len(y0)==0:
+            self.koef[name_coef[0]]=0
+            return {'score':0, 'inf_gate':False, 'fl_success':False}
+        
         self.koef[name_coef[0]]=np.mean(y0)
         y_true=y0
         y_pred=np.full(len(y_true), self.koef[name_coef[0]])
         rez=self.score( y_true, y_pred, metric='r2_score')
 
-        return {'score':rez, 'inf_gate':False}
-        
-
-        
-    
-    
+        return {'score':rez, 'inf_gate':False, 'fl_success':True}
    
         
 #==============================================================================
@@ -242,10 +258,17 @@ class list_less(list_tree_base):
         unuc_val=params['X'][self.name_feature].loc[mask0].unique()
         unuc_val=np.sort(unuc_val)
         unuc_val1=(unuc_val[1:]+unuc_val[0:-1])/2
-        if len(unuc_val1)<1:
-            return {'fl_success':False}
+        
 
         koef_name=self.get_name_koef()[0]
+        if len(unuc_val1)<1:
+            self.set_koef({koef_name:0})
+            mask=self.eval(params)
+            mask_inv=np.invert(mask)
+            best_mask0=(mask & mask0).copy()
+            best_mask1=(mask_inv & mask0).copy()
+
+            return {'fl_success':False, 'mask0':best_mask0, 'mask1':best_mask1}
         flag=0
         for p in unuc_val1:
             self.set_koef({koef_name:p})
