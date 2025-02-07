@@ -216,8 +216,6 @@ class list_regr_const(list_tree_base):
         rez=self.score( y_true, y_pred, metric='mse')
 
         return {'score':rez, 'inf_gate':False, 'fl_success':True}
-   
-        
 #==============================================================================
 class list_less(list_tree_base):
     def __init__(self, name_feature='' ) -> None:

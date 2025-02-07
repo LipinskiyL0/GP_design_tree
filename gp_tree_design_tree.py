@@ -468,6 +468,7 @@ if __name__=='__main__':
 
     tree=gp_tree_design_tree(list_T=list_T, list_F=list_F, level=0, nom_list='1', type_ini='LearnID3',
                     limit_level=2, params=params)
+    
     str_tree=tree.print_tree()
     print(str_tree)
     e=tree.score(X=X, y=y, metric='r2_score')

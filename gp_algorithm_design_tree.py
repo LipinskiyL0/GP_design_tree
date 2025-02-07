@@ -29,9 +29,6 @@ class gp_algorithm_design_tree (gp_algorithm):
             fit=0
         return fit
 if __name__ == '__main__':
-   
-   
-   
     data = load_diabetes()
     X=data.data
     X=pd.DataFrame(X, columns=data.feature_names)
