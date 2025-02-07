@@ -121,8 +121,9 @@ class list_tree_base:
         
         if metric=='f1':
             rez=f1_score(y_true, y_pred, average='macro')
-        elif metric=='r2_score':
-            rez=r2_score(y_true, y_pred)
+        elif metric=='mse':
+            rez=mse(y_true, y_pred)
+            rez=1/(1+rez)
         else:
             raise RuntimeError('Неизвестная метрика')
         return rez
@@ -208,10 +209,11 @@ class list_regr_const(list_tree_base):
             self.koef[name_coef[0]]=0
             return {'score':0, 'inf_gate':False, 'fl_success':False}
         
-        self.koef[name_coef[0]]=np.mean(y0)
+        # self.koef[name_coef[0]]=np.mean(y0)
+        self.set_koef({name_coef[0]:np.mean(y0)})
         y_true=y0
         y_pred=np.full(len(y_true), self.koef[name_coef[0]])
-        rez=self.score( y_true, y_pred, metric='r2_score')
+        rez=self.score( y_true, y_pred, metric='mse')
 
         return {'score':rez, 'inf_gate':False, 'fl_success':True}
    

@@ -77,7 +77,7 @@ from sklearn.metrics import mean_squared_error as mse
 from scipy.optimize import minimize
 from DivClass import DivClass
 from bcolors import bcolors
-from sklearn.datasets import load_iris
+from sklearn.datasets import load_diabetes
 
 class gp_tree_design_tree(gp_tree):
     def __init__(self, list_T=None, list_F=None, level=0, nom_list='1', type_ini='full',
@@ -148,9 +148,12 @@ class gp_tree_design_tree(gp_tree):
             if level == 0:
                 params['list_T']=list_T
             if level == 0:
-                list_F_temp=pd.Series(list_F)
-                list_F_temp=list_F_temp.sample(params['n_features'])
-                params['list_F']=list(list_F_temp)
+                if params['n_features']<0:
+                    params['list_F']=list_F.copy()
+                else:
+                    list_F_temp=pd.Series(list_F)
+                    list_F_temp=list_F_temp.sample(params['n_features'])
+                    params['list_F']=list(list_F_temp)
             rez=self.LearnID3(params)
             self.list=rez['list']
             self.level=level
@@ -285,6 +288,8 @@ class gp_tree_design_tree(gp_tree):
             rez=f1_score(y, y_pred, average='macro')
         elif metric=='mse':
             rez=mse(y, y_pred)
+        elif metric=='r2_score':
+            rez=r2_score(y, y_pred)
         else:
             raise RuntimeError('Неизвестная метрика')
         return rez
@@ -302,6 +307,8 @@ class gp_tree_design_tree(gp_tree):
         if metric=='f1':
             # переворачиваем для минимизации
             e=1-e 
+        elif metric=='r2_score':
+            e=1-e
         return e
 #--------------------------------------------------------------------------            
     def fit(self, X, y, metric='f1', restart=True, method='Nelder-Mead', iterations=100, inf_name='gini'):
@@ -444,36 +451,38 @@ class gp_tree_design_tree(gp_tree):
 if __name__=='__main__':
     
 
-    data = load_iris()
+    data = load_diabetes()
     X=data.data
     X=pd.DataFrame(X, columns=data.feature_names)
     y=data.target
     y=pd.Series(y, name='y')
-    params={'X':X, 'y':y,'mask':None,'epsilon':1e-10, 'num_samples':4,'inf_name':'gini', 'list_F':None, 'list_T':None,
-            'n_features':4 }
+    # params={'X':X, 'y':y,'method':'DE','score_metric':'f1','iterations':20   }
+    params={'X':X, 'y':y,'mask':None,'epsilon':1e-10, 'num_samples':4,'inf_name':'mse', 'list_F':None, 'list_T':None,
+            'n_features':1,'method':'self_optimization','score_metric':'mse','iterations':50  }
     list_T=[]
-    for c in y.unique():
-        list_T.append(list_nom_class(value=c))
+    list_T.append(list_regr_const())
+
     list_F=[]
     for c in X.columns:
         list_F.append(list_less(name_feature=c ))
+
     tree=gp_tree_design_tree(list_T=list_T, list_F=list_F, level=0, nom_list='1', type_ini='LearnID3',
                     limit_level=2, params=params)
     str_tree=tree.print_tree()
     print(str_tree)
-    e=tree.score(X=X, y=y, metric='f1')
+    e=tree.score(X=X, y=y, metric='r2_score')
     print(f'точность работы на исходном дереве: {e}')
     # Проверяем функцию fit
-    e=tree.fit(X=X,y=y, method='self_optimization',metric='f1', inf_name='gini')
+    e=tree.fit(X=X,y=y, method='self_optimization',metric='mse', inf_name='mse')
     print(f'loss: {e}')
-    e=tree.score(X=X, y=y, metric='f1')
+    e=tree.score(X=X, y=y, metric='r2_score')
     print(f'точность работы на исходном дереве: {e}')
     y_pred=tree.predict(X=X)
     y_pred.name='y_pred'
     print('Сравниваем "реальны" и вычисленный выходы')
 
     print(pd.concat([X, y,y_pred], axis=1))
-    mse_score=tree.score(X=X, y=y, metric='f1')
+    mse_score=tree.score(X=X, y=y, metric='r2_score')
     print()
     print(mse_score)
     print(tree.print_tree())   

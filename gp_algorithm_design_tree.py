@@ -10,7 +10,7 @@ from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error
 from gp_tree_design_tree import gp_tree_design_tree
 from gp_list_design_tree import *
-from sklearn.datasets import load_iris
+from sklearn.datasets import load_diabetes
 
 class gp_algorithm_design_tree (gp_algorithm):
     def fit_function(self, tree, params):
@@ -20,7 +20,11 @@ class gp_algorithm_design_tree (gp_algorithm):
         
         fit=1/(1+e)
         num_node=tree.get_num_node()
-        fit=fit-0.01*num_node
+        if ('penalty_num_node' in params) == False:
+            k_penalty=0
+        else:
+            k_penalty=params['penalty_num_node']
+        fit=fit-k_penalty*num_node
         if fit<0:
             fit=0
         return fit
@@ -28,17 +32,17 @@ if __name__ == '__main__':
    
    
    
-    data = load_iris()
+    data = load_diabetes()
     X=data.data
     X=pd.DataFrame(X, columns=data.feature_names)
     y=data.target
     y=pd.Series(y, name='y')
     # params={'X':X, 'y':y,'method':'DE','score_metric':'f1','iterations':20   }
-    params={'X':X, 'y':y,'mask':None,'epsilon':1e-10, 'num_samples':4,'inf_name':'gini', 'list_F':None, 'list_T':None,
-            'n_features':1,'method':'self_optimization','score_metric':'f1','iterations':50  }
+    params={'X':X, 'y':y,'mask':None,'epsilon':1e-10, 'num_samples':4,'inf_name':'mse', 'list_F':None, 'list_T':None,
+            'n_features':1,'method':'self_optimization','score_metric':'mse','iterations':50  }
     list_T=[]
-    for c in y.unique():
-        list_T.append(list_nom_class(value=c))
+    list_T.append(list_regr_const())
+
     list_F=[]
     for c in X.columns:
         list_F.append(list_less(name_feature=c ))
