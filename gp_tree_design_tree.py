@@ -297,12 +297,12 @@ class gp_tree_design_tree(gp_tree):
     def loss(self, x0, X, y, metric, list_keys):
         #функция для обучения дерева. Определяет функцию потерь. основывается на стандартных метриках
         #преобразует метрики в функцию потерь, т.е. чем меньше значение тем лучше. 
-        
-        koef={}
-        for key, x in zip(list_keys, x0):
-            koef[key]=x
-            
-        self.set_koef(koef)
+        if (x0 is None)==False:
+            koef={}
+            for key, x in zip(list_keys, x0):
+                koef[key]=x
+                
+            self.set_koef(koef)
         e=self.score(X=X, y=y, metric=metric)
         if metric=='f1':
             # переворачиваем для минимизации

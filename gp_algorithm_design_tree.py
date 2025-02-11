@@ -11,14 +11,28 @@ from sklearn.metrics import mean_absolute_error
 from gp_tree_design_tree import gp_tree_design_tree
 from gp_list_design_tree import *
 from sklearn.datasets import load_diabetes
+import numpy as np
+from sklearn.model_selection import KFold
 
 class gp_algorithm_design_tree (gp_algorithm):
     def fit_function(self, tree, params):
         #вычисление пригодности индивида
-        e=tree.fit(X=params['X'], y=params['y'], method=params['method'],
-                   metric=params['score_metric'], iterations=params['iterations'])
-        
-        fit=1/(1+e)
+
+        X=params['X']
+        y=params['y']
+        n_split=params['n_split']
+
+        mas_loss=np.zeros(n_split, dtype=np.float32)
+        kf = KFold(n_splits=n_split, shuffle=True)
+
+        for i, (train_index, test_index) in enumerate(kf.split(X)):
+            # print(f"Fold {i}:")
+            e=tree.fit(X=X.iloc[ train_index, :], y=y.iloc[train_index], method=params['method'],
+                    metric=params['score_metric'], iterations=params['iterations'])
+            mas_loss[i]=tree.loss(x0=None, X=X.iloc[ test_index, :], y=y.iloc[test_index], 
+                                  metric=params['score_metric'], list_keys=None)
+            
+        fit=1/(1+np.mean(mas_loss))
         num_node=tree.get_num_node()
         if ('penalty_num_node' in params) == False:
             k_penalty=0
@@ -36,7 +50,8 @@ if __name__ == '__main__':
     y=pd.Series(y, name='y')
     # params={'X':X, 'y':y,'method':'DE','score_metric':'f1','iterations':20   }
     params={'X':X, 'y':y,'mask':None,'epsilon':1e-10, 'num_samples':4,'inf_name':'mse', 'list_F':None, 'list_T':None,
-            'n_features':1,'method':'self_optimization','score_metric':'mse','iterations':50  }
+            'n_features':1,'method':'self_optimization','score_metric':'mse','iterations':50, 'n_split':5,
+              'penalty_num_node':0.00000001  }
     list_T=[]
     list_T.append(list_regr_const())
 
